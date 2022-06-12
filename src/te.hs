@@ -1,5 +1,6 @@
 import System.Random
 import Data.List
+import Data.Char
 
 import System.IO
 
@@ -21,8 +22,8 @@ powMod x y m
 getRandomPrime :: Integer -> Integer -> Integer-> IO Integer
 getRandomPrime l h k  =
     do
-        n <- randomInteger l h 
-        let (d, r) = rabinMillerForm n 
+        n <- randomInteger l h
+        let (d, r) = rabinMillerForm n
         isPrime <- rabinMillerTest n d r k
         if isPrime then return n else getRandomPrime l h k
 
@@ -33,7 +34,7 @@ rabinMillerForm n = (d, toInteger r) where
     d = factorList !! r
 
 rabinMillerTest :: Integer -> Integer -> Integer -> Integer -> IO Bool
-rabinMillerTest n d r k 
+rabinMillerTest n d r k
     | k <= 0 = return True
     | otherwise =
         do
@@ -45,7 +46,7 @@ rabinMillerTest n d r k
 rabinMillerInnerLoop :: Integer -> Integer -> Integer -> Integer -> IO Bool
 rabinMillerInnerLoop n r x k
     | r <= 0 = return False
-    | otherwise = 
+    | otherwise =
         let
             x' = powMod x 2 n
             (d, r') = rabinMillerForm n
@@ -53,12 +54,12 @@ rabinMillerInnerLoop n r x k
 
 
 egcd a b = egcdHelp (a, b) (1, 0) (0, 1)
-egcdHelp (r', r) (s', s) (t', t) 
+egcdHelp (r', r) (s', s) (t', t)
     | r == 0 = (s', t')
     | otherwise = egcdHelp (r, r' - q*r) (s, s' - q*s) (t, t' - q*t) where q = quot r'  r
 
 getPrivateExponent :: Integer -> Integer -> Integer -> IO Integer
-getPrivateExponent e p q = 
+getPrivateExponent e p q =
         return (powMod (fst (egcd e ((p - 1) * (q - 1)))) 1 ((p - 1) * (q - 1)))
 
 getRSAKeyPairs :: Integer -> Integer -> Integer -> IO ((Integer, Integer), (Integer, Integer))
@@ -71,12 +72,28 @@ getRSAKeyPairs m n k =
         return ((e, p * q), (d, p * q))
 
 main = do
-        getRSAKeyPairs (2^11) (2^12) 4
-
+        (pub, priv) <- getRSAKeyPairs (2^1023) (2^1024) 4
+        let encryptedMsg = encryptText "hello" pub
+        let decryptedMsg = decryptText encryptedMsg priv
+        return (encryptedMsg, decryptedMsg)
 
 encrypt :: Integer -> (Integer, Integer) -> Integer
 encrypt m (e, n) = powMod m e n
 
--- Decrypts a message c using private key pair prk=(d, n)
 decrypt :: Integer -> (Integer, Integer) -> Integer
 decrypt c (d, n) = powMod c d n
+
+encryptText :: String -> (Integer, Integer) -> Integer
+encryptText s = encrypt (textToInt 0 s)
+
+decryptText :: Integer -> (Integer, Integer) -> String
+decryptText s key = show (intToText (decrypt s key))
+
+textToInt :: Integer  -> [Char] -> Integer
+textToInt _ [] = 0
+textToInt exp (x:xs) = (fromIntegral (ord x) * 128^exp) + textToInt (exp+1) xs
+
+intToText :: Integer -> [Char]
+intToText 0 = []
+intToText msgi = chr (fromIntegral (msgi `mod` 128)) : intToText (msgi `div` 128)
+
