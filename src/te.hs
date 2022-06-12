@@ -51,8 +51,32 @@ rabinMillerInnerLoop n r x k
             (d, r') = rabinMillerForm n
         in if x' == n-1 then rabinMillerTest n d r' k else rabinMillerInnerLoop n (pred r) x' k
 
+
+egcd a b = egcdHelp (a, b) (1, 0) (0, 1)
+egcdHelp (r', r) (s', s) (t', t) 
+    | r == 0 = (s', t')
+    | otherwise = egcdHelp (r, r' - q*r) (s, s' - q*s) (t, t' - q*t) where q = quot r'  r
+
+getPrivateExponent :: Integer -> Integer -> Integer -> IO Integer
+getPrivateExponent e p q = 
+        return (powMod (fst (egcd e ((p - 1) * (q - 1)))) 1 ((p - 1) * (q - 1)))
+
+getRSAKeyPairs :: Integer -> Integer -> Integer -> IO ((Integer, Integer), (Integer, Integer))
+getRSAKeyPairs m n k =
+    do
+        p <- getRandomPrime m n k
+        q <- getRandomPrime m n k
+        let e = 65537
+        d <- getPrivateExponent e p q
+        return ((e, p * q), (d, p * q))
+
 main = do
-        randGen <- getStdGen
-        putStr "Generating key, please wait...\n"
-        getRandomPrime (2^11) (2^12) 4
-        putStr "Success!\n"
+        getRSAKeyPairs (2^11) (2^12) 4
+
+
+encrypt :: Integer -> (Integer, Integer) -> Integer
+encrypt m (e, n) = powMod m e n
+
+-- Decrypts a message c using private key pair prk=(d, n)
+decrypt :: Integer -> (Integer, Integer) -> Integer
+decrypt c (d, n) = powMod c d n
