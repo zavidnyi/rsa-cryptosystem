@@ -20,7 +20,7 @@ This will generate executable in main folder which you can run as
 ## Key generation
 To generate private and public keys pair run:
 ```shell
-./rsa -gen [key-size in bits]
+./rsa -gen [key-size in bits, defaults to 512]
 ```
 
 ## To be continued
