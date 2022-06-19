@@ -9,6 +9,12 @@ import Data.Maybe ( fromMaybe )
 import Data.Text ( splitOn )
 
 
+main :: IO ()
+main = do
+    args <- getArgs
+    str <- parseArgs args
+    putStr str
+
 
 helpMSG :: String
 helpMSG =
@@ -18,14 +24,9 @@ helpMSG =
     "To encrypt ASCII text use this command: rsa -encrypt [path to key] [path to text]\n" ++
     "To decrypt ASCII text use this command: rsa -decrypt [path to key] [path to text]\n"
 
-main = do
-    args <- getArgs
-    str <- parseArgs args
-    putStr str
-
 parseArgs :: [String] -> IO String
 parseArgs args
-    | null args = return "No arguments given, aborting..."
+    | null args = return "No arguments given, aborting...\n To see help run with `-h` flag"
     | head args == "-h" = return helpMSG
     | head args == "-gen" = if length args < 2 then genKeys (args ++ ["512"]) else genKeys args
     | head args == "-encrypt" = if length args < 3 then return ("WRONG ARGUMENTS\n" ++ helpMSG) else encryptCMD args
