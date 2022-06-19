@@ -1,5 +1,5 @@
 # RSA cryptosystem
-[RSA](https://people.csail.mit.edu/rivest/Rsapaper.pdf) cryptosystem implementation made in Haskell programming language. Note, that this implementation is not secure and was mainly made for course completion requirements 😊
+[RSA cryptosystem](https://people.csail.mit.edu/rivest/Rsapaper.pdf) implementation made in Haskell programming language. Note, that this implementation is not secure and was mainly made for course completion requirements 😊
 
 ## Setup
 
@@ -23,4 +23,19 @@ To generate private and public keys pair run:
 ./rsa -gen [key-size in bits, defaults to 512]
 ```
 
-## To be continued
+## Encryption/Decryption
+You can encrypt any ASCII text file using:
+```
+./rsa -encrypt [path to key] [path to text]
+```
+
+
+Similary to decrypt:
+```
+./rsa -decrypt [path to key] [path to text]
+```
+
+The commands above print text to standart ouput if you want to write to file use ```> [filename]```, for example this command writes encrypted text to file `A.txt`
+```
+./rsa -encrypt pub.key text > A.txt
+```
