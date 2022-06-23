@@ -1,13 +1,17 @@
 module KeyPairGeneration where
 
-import Data.List
-import System.Random (randomRIO)
+import Data.List ( nub )
+import System.Random (randomRIO, Random (randoms), randomIO)
+import Control.Monad (replicateM)
 
 --------START: Random prime generation--------
 
 -- Generates random interger in range [l,h] using global random number generator
 randomInteger :: Integer -> Integer -> IO Integer
 randomInteger l h = randomRIO (l, h)
+
+randomIntegerList :: Int -> Integer -> Integer -> IO [Integer]
+randomIntegerList n l h = do replicateM n (randomInteger l h)
 
 -- Taken from documentation:
 -- https://hackage.haskell.org/package/arithmoi-0.12.0.1/docs/src/Math.NumberTheory.Powers.Modular.html#powMod
@@ -27,7 +31,7 @@ powMod x y m
 -- For prime number generation Rabin Miller test is used:
 -- https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
 
-getRandomPrime :: Integer -> Integer -> Integer -> IO Integer
+getRandomPrime :: Integer -> Integer -> Int -> IO Integer
 getRandomPrime l h k = do
   n <- randomInteger l h
   let (d, r) = rabinMillerForm n
@@ -43,24 +47,21 @@ rabinMillerForm n = (d, toInteger r)
     d = factorList !! r
 
 -- Corresponds to the outer loop of Miller rabin test mentioned above ^
-rabinMillerTest :: Integer -> Integer -> Integer -> Integer -> IO Bool
-rabinMillerTest n d r k
-  | k <= 0 = return True
-  | otherwise =
-    do
-      a <- randomInteger 2 (n -2)
-      let x = powMod a d n
-      if x == 1 || x == n -1 then rabinMillerTest n d r (pred k) else rabinMillerInnerLoop n r x (pred k)
+rabinMillerTest :: Integer -> Integer -> Integer -> Int -> IO Bool
+rabinMillerTest n d r k = 
+  do
+    as <- randomIntegerList k 2 (n-2)
+    return  (nub [witness n a d r | a <- as] == [True])
 
+witness :: Integer -> Integer -> Integer -> Integer -> Bool
+witness n a d r =
+  let x = powMod a d n in
+          (x == 1 || x == n -1) || witnessInnerLoop n r x
 
--- Corresponds to the INNER loop of Miller rabin test mentioned above ^
-rabinMillerInnerLoop :: Integer -> Integer -> Integer -> Integer -> IO Bool
-rabinMillerInnerLoop n r x k
-  | r <= 0 = return False
-  | otherwise =
-    let x' = powMod x 2 n
-        (d, r') = rabinMillerForm n
-     in if x' == n -1 then rabinMillerTest n d r' k else rabinMillerInnerLoop n (pred r) x' k
+witnessInnerLoop :: Integer -> Integer -> Integer -> Bool
+witnessInnerLoop n r x
+  | r <= 0 = False
+  | otherwise = let x' = powMod x 2 n in (x' == n -1) || witnessInnerLoop n (pred r) x'
 
 --------END: Random prime generation--------
 
@@ -85,7 +86,7 @@ getPrivateExponent e p q =
 -- Generates RSA key pairs
 -- For public exponent we use common e = 2^16 + 1 = 65,537
 -- Private exponent is generated as it should i.e.  d = e^(-1)(mod ((p-1) * (q-1)))
-getRSAKeyPairs :: Integer -> Integer -> Integer -> IO ((Integer, Integer), (Integer, Integer))
+getRSAKeyPairs :: Integer -> Integer -> Int -> IO ((Integer, Integer), (Integer, Integer))
 getRSAKeyPairs m n k =
   do
     p <- getRandomPrime m n k

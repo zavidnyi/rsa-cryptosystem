@@ -25,29 +25,25 @@ helpMSG =
     "To decrypt ASCII text use this command: rsa -decrypt [path to key] [path to text]\n"
 
 parseArgs :: [String] -> IO String
-parseArgs args
-    | null args = return "No arguments given, aborting...\n To see help run with `-h` flag"
-    | head args == "-h" = return helpMSG
-    | head args == "-gen" = if length args < 2 then genKeys (args ++ ["512"]) else genKeys args
-    | head args == "-encrypt" = if length args < 3 then return ("WRONG ARGUMENTS\n" ++ helpMSG) else encryptCMD args
-    | head args == "-decrypt" = if length args < 3 then return ("WRONG ARGUMENTS\n" ++ helpMSG) else decryptCMD args
-    | otherwise = return ("WRONG ARGUMENTS\n" ++ helpMSG)
+parseArgs args = case args of
+    [] -> return "No arguments given, aborting...\n To see help run with `-h` flag"
+    ["-h"] -> return helpMSG
+    ["-gen"] -> genKeys 512
+    ["-gen", size] -> genKeys (getInteger size)
+    ["-encrypt", keyFile, textFile] -> encryptCMD keyFile textFile
+    ["-decrypt", keyFile, textFile] -> decryptCMD keyFile textFile
+    _ -> return ("WRONG ARGUMENTS\n" ++ helpMSG)
 
 getInteger :: String -> Integer
-getInteger str = do
-    let mint = readMaybe str :: Maybe Integer
-    case mint of
-        Nothing -> -1
-        Just int -> int
+getInteger str = fromMaybe (-1) (readMaybe str :: Maybe Integer)
 
 intToHex :: Integer -> String
 intToHex n = map toUpper (showHex n "")
 
-genKeys :: [String] -> IO String
-genKeys args = do
-    let inp = getInteger (args !! 1)
-    if inp <= 0 then return "Invalid key-size\n" else do
-    let keySize = inp `div` 2
+genKeys :: Integer -> IO String
+genKeys size = do
+    if size <= 0 then return "Invalid key-size\n" else do
+    let keySize = size `div` 2
     ((e, n), (d, _)) <- getRSAKeyPairs (2^(keySize-1))  (2^keySize) 10
     writeFile "pub.key" (intToHex e ++ "\0" ++ intToHex n)
     writeFile "priv.key" (intToHex d ++ "\0" ++ intToHex n)
@@ -63,20 +59,18 @@ split (c:cs) delim
         rest = split cs delim
 
 
-encryptCMD :: [String] -> IO String
-encryptCMD args = do
-    key <- readFile (args !! 1)
-    text <- readFile (args !! 2)
-    let keys = map (fst . head . readHex ) (split key '\0')
-    if length keys /= 2 then return "WRONG KEY FORMAT" else do
-    let [exp, n] = keys
-    return (encryptText text (exp, n))
+encryptCMD :: String -> String -> IO String
+encryptCMD keyFile textFile = do
+    key <- readFile keyFile
+    text <- readFile textFile
+    case map (fst . head . readHex ) (split key '\0') of
+        [exp, n] -> return (encryptText text (exp, n))
+        _ -> return "WRONG KEY FORMAT"
 
-decryptCMD :: [String] -> IO String
-decryptCMD args = do
-    key <- readFile (args !! 1)
-    text <- readFile (args !! 2)
-    let keys = map (fst . head . readHex ) (split key '\0')
-    if length keys /= 2 then return "WRONG KEY FORMAT" else do
-    let [exp, n] = keys
-    return (decryptText text (exp, n))
+decryptCMD :: String -> String -> IO String
+decryptCMD keyFile textFile = do
+    key <- readFile keyFile
+    text <- readFile textFile
+    case map (fst . head . readHex ) (split key '\0') of
+        [exp, n] -> return (decryptText text (exp, n))
+        _ -> return "WRONG KEY FORMAT"

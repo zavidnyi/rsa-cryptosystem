@@ -31,8 +31,4 @@ intToText msgi = chr (fromIntegral (msgi `mod` 128)) : intToText (msgi `div` 128
 
 getBlocks :: Int -> [Char] -> [[Char]]
 getBlocks _ [] = []
-getBlocks len raw =
-    front : getBlocks len rest
-  where
-    front = take len raw
-    rest = drop len raw
+getBlocks len raw = let (front, rest) = splitAt len raw in front : getBlocks len rest
